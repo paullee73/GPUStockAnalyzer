@@ -13,7 +13,7 @@
 #include <boost/tokenizer.hpp>
 #include <cstdlib>
 
-void run(gpudb::GPUdb &gpudb)
+void run(gpudb::GPUdb &gpudb, std::string relationDate, std::string specificDate, std::string relationPrice, std::string specificPrice)
 {
     using namespace std;
     using namespace boost;
@@ -28,11 +28,9 @@ void run(gpudb::GPUdb &gpudb)
     // Get the version information
     std::cout << "GPUdb C++ Client Version: " << gpudb.getApiVersion() << std::endl;
 
-    // Create some test data
-
     //create columns for the table
     std::vector<gpudb::Type::Column> columns;
-    columns.push_back(gpudb::Type::Column("TIMESTAMP", gpudb::Type::Column::STRING));
+    columns.push_back(gpudb::Type::Column("TIMESTAMP", gpudb::Type::Column::DOUBLE));
     columns.push_back(gpudb::Type::Column("GASOLINE_STOCK", gpudb::Type::Column::DOUBLE));
     gpudb::Type newType = gpudb::Type("Test", columns);
     std::string typeId = newType.create(gpudb);
@@ -57,7 +55,8 @@ void run(gpudb::GPUdb &gpudb)
                 Tokenizer tok(line);
                 vec.assign(tok.begin(), tok.end());
                 gpudb::GenericRecord record(newType);
-                record.stringValue("TIMESTAMP") = vec[0];
+                record.doubleValue("TIMESTAMP") = atof(vec[0].substr(0,2).c_str())*2592000
+                    + atof(vec[0].substr(3,5).c_str())*86400 + atof(vec[0].substr(6,10).c_str())*31557600;
                 record.doubleValue("GASOLINE_STOCK") = atof(vec[5].c_str());
                 data.push_back(record);
             }
@@ -74,22 +73,21 @@ void run(gpudb::GPUdb &gpudb)
     }
 
     // Group by value
+    // std::vector<std::string> gbvColumns;
+    // gbvColumns.push_back("TIMESTAMP");
+    // std::map<std::string, std::string> gbParams;
+    // // gbParams["sort_order"] = "descending";
+    // // gbParams["sort_by"] = "value";
 
-    std::vector<std::string> gbvColumns;
-    gbvColumns.push_back("TIMESTAMP");
-    std::map<std::string, std::string> gbParams;
-    // gbParams["sort_order"] = "descending";
-    // gbParams["sort_by"] = "value";
+    // std::cout << "calling groupby (new)" << std::endl;
 
-    std::cout << "calling groupby (new)" << std::endl;
+    // std::vector<std::string> gbColumns;
+    // gbColumns.push_back("TIMESTAMP");
+    // gbColumns.push_back("GASOLINE_STOCK");
 
-    std::vector<std::string> gbColumns;
-    gbColumns.push_back("TIMESTAMP");
-    gbColumns.push_back("GASOLINE_STOCK");
-
-    //(tableName, columnNames, offset, limit, options)
-    gpudb::AggregateGroupByResponse gbResponse = gpudb.aggregateGroupBy(table_name, gbColumns, 0, 10, gbParams);
-    std::cout << "got groupby response, data size: " << gbResponse.data.size() << std::endl;
+    // //(tableName, columnNames, offset, limit, options)
+    // gpudb::AggregateGroupByResponse gbResponse = gpudb.aggregateGroupBy(table_name, gbColumns, 0, 10, gbParams);
+    // std::cout << "got groupby response, data size: " << gbResponse.data.size() << std::endl;
     
     // for (size_t i = 0; i < gbResponse.data.size(); ++i)
     // {
@@ -112,10 +110,21 @@ void run(gpudb::GPUdb &gpudb)
     //     std::cout << std::endl;
     // }
 
-    std::string table_view_name = "TestResult";
-    gpudb.filter(table_name, table_view_name, "GASOLINE_STOCK > 24000", options);
+    //convert input date to seconds
+    double specificTime;
+    if(specificDate.size() != 0){
+        specificTime = atof(specificDate.substr(0,2).c_str())*2592000
+                    + atof(specificDate.substr(3,5).c_str())*86400 + atof(specificDate.substr(6,10).c_str())*31557600;
+    }
 
-    gpudb::GetRecordsResponse<gpudb::GenericRecord> gsoResponse = gpudb.getRecords<gpudb::GenericRecord>(newType, table_view_name, 0, 100, options);
+    std::string table_view_name = "TestResult";
+    std::string specificParam = "TIMESTAMP"+boost::lexical_cast<std::string>(" ")+boost::lexical_cast<std::string>(relationDate)+
+        boost::lexical_cast<std::string>(" ")+boost::lexical_cast<std::string>(specificTime)+
+        " and GASOLINE_STOCK "+boost::lexical_cast<std::string>(relationPrice)+
+        boost::lexical_cast<std::string>(" ")+boost::lexical_cast<std::string>(specificPrice);
+    gpudb.filter(table_name, table_view_name, specificParam, options);
+
+    gpudb::GetRecordsResponse<gpudb::GenericRecord> gsoResponse = gpudb.getRecords<gpudb::GenericRecord>(newType, table_view_name, 0, 800, options);
 
     for (size_t i = 0; i < gsoResponse.data.size(); ++i)
     {
@@ -130,9 +139,9 @@ void run(gpudb::GPUdb &gpudb)
 
 int main(int argc, char* argv[])
 {
-    if (argc < 2)
+    if (argc < 5)
     {
-        std::cout << "Please enter local address of your running instance: " << std::endl;
+        std::cout << "Enter as parameters: ./test </> someDate </> somePrice " << std::endl;
 
         exit(1);
     }
@@ -151,9 +160,10 @@ int main(int argc, char* argv[])
     std::string host(hosts[0]);
     std::cout << "Connecting to GPUdb host: '" << host << "'" << std::endl;
     gpudb::GPUdb gpudb(host, opts);
-    run(gpudb);
-
-
-
+    std::string relationDate(argv[2]);
+    std::string specificDate(argv[3]);
+    std::string relationPrice(argv[4]);
+    std::string specificPrice(argv[5]);
+    run(gpudb, relationDate, specificDate, relationPrice, specificPrice);
     return 0;
 }
