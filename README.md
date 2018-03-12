@@ -1,0 +1,1 @@
+Utilizes GPUs to parse and sort through gasoline stock prices since 2014 in seconds. Organize by date and stock prices for a given day.
