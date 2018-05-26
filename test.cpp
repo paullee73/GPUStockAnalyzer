@@ -12,7 +12,7 @@
 #include <iterator>
 #include <boost/tokenizer.hpp>
 #include <cstdlib>
-
+#include <stdio.h>
 void run(gpudb::GPUdb &gpudb, std::string relationDate, std::string specificDate, std::string relationPrice, std::string specificPrice)
 {
     using namespace std;
@@ -26,12 +26,13 @@ void run(gpudb::GPUdb &gpudb, std::string relationDate, std::string specificDate
     std::map<std::string, std::string> options;
 
     // Get the version information
-    std::cout << "GPUdb C++ Client Version: " << gpudb.getApiVersion() << std::endl;
+    // std::cout << "GPUdb C++ Client Version: " << gpudb.getApiVersion() << std::endl;
 
     //create columns for the table
     std::vector<gpudb::Type::Column> columns;
     columns.push_back(gpudb::Type::Column("TIMESTAMP", gpudb::Type::Column::DOUBLE));
     columns.push_back(gpudb::Type::Column("GASOLINE_STOCK", gpudb::Type::Column::DOUBLE));
+    columns.push_back(gpudb::Type::Column("DATE", gpudb::Type::Column::STRING));
     gpudb::Type newType = gpudb::Type("Test", columns);
     std::string typeId = newType.create(gpudb);
     std::string table_name = "Test";
@@ -45,7 +46,7 @@ void run(gpudb::GPUdb &gpudb, std::string relationDate, std::string specificDate
 
         std::vector<gpudb::GenericRecord> data;
 
-        cout << "TIMESTAMP" << "\t" << "GASOLINE_STOCK" << endl;
+        //cout << "TIMESTAMP" << "\t" << "GASOLINE_STOCK" << endl;
         vector<string> vec;
         string line;
 
@@ -58,6 +59,7 @@ void run(gpudb::GPUdb &gpudb, std::string relationDate, std::string specificDate
                 record.doubleValue("TIMESTAMP") = atof(vec[0].substr(0,2).c_str())*2592000
                     + atof(vec[0].substr(3,5).c_str())*86400 + atof(vec[0].substr(6,10).c_str())*31557600;
                 record.doubleValue("GASOLINE_STOCK") = atof(vec[5].c_str());
+                record.stringValue("DATE") = vec[0];
                 data.push_back(record);
             }
             i++;
@@ -65,7 +67,6 @@ void run(gpudb::GPUdb &gpudb, std::string relationDate, std::string specificDate
 
         gpudb.insertRecords(table_name, data, options);
 
-        std::cout << "done inserting records" << std::endl;
     }
     catch (const std::exception& e)
     {
@@ -125,14 +126,18 @@ void run(gpudb::GPUdb &gpudb, std::string relationDate, std::string specificDate
     gpudb.filter(table_name, table_view_name, specificParam, options);
 
     gpudb::GetRecordsResponse<gpudb::GenericRecord> gsoResponse = gpudb.getRecords<gpudb::GenericRecord>(newType, table_view_name, 0, 800, options);
-
+    //freopen("output.txt", "w", stdout);
+    string nextLine = "\n";
     for (size_t i = 0; i < gsoResponse.data.size(); ++i)
     {
         const gpudb::GenericRecord& record = gsoResponse.data[i];
-        std::cout << record.toString("TIMESTAMP")
-                << " " << record.toString("GASOLINE_STOCK")
-                << std::endl;
+        cout << record.toString("DATE").c_str() << " " << record.toString("GASOLINE_STOCK").c_str() << endl;
+        //printf(record.toString("DATE").c_str());
+        //printf("\t");
+        //printf(record.toString("GASOLINE_STOCK").c_str());
+        //printf(nextLine.c_str());
     }
+    fclose(stdout);
     gpudb.clearTable(table_view_name, "", options);
     gpudb.clearTable(table_name, "", options);
 }
@@ -158,7 +163,7 @@ int main(int argc, char* argv[])
     #endif
 
     std::string host(hosts[0]);
-    std::cout << "Connecting to GPUdb host: '" << host << "'" << std::endl;
+    // std::cout << "Connecting to GPUdb host: '" << host << "'" << std::endl;
     gpudb::GPUdb gpudb(host, opts);
     std::string relationDate(argv[2]);
     std::string specificDate(argv[3]);
