@@ -58,7 +58,10 @@
             <div class="col-md-1">
             </div>
             <div class="col-md-10">
-                <div id="chart_div" style="height: 600px"></div>
+                <!-- <div id="chart_div" style="height: 600px"></div> -->
+                <input type="file" id="file-input" />
+                <h3>Database filter result:</h3>
+                <pre id="file-content"></pre>
             </div>
             <div class="col-md-1">
             </div>
@@ -72,42 +75,51 @@
 </body>
 
 <script>
-    google.charts.load('current', { packages: ['corechart', 'line'] });
-    google.charts.setOnLoadCallback(drawBackgroundColor);
-
-    function drawBackgroundColor() {
-        var data = new google.visualization.DataTable();
-        data.addColumn('number', 'X');
-        data.addColumn('number', 'Gasoline');
-
-        data.addRows([
-            [0, 0], [1, 10], [2, 23], [3, 17], [4, 18], [5, 9],
-            [6, 11], [7, 27], [8, 33], [9, 40], [10, 32], [11, 35],
-            [12, 30], [13, 40], [14, 42], [15, 47], [16, 44], [17, 48],
-            [18, 52], [19, 54], [20, 42], [21, 55], [22, 56], [23, 57],
-            [24, 60], [25, 50], [26, 52], [27, 51], [28, 49], [29, 53],
-            [30, 55], [31, 60], [32, 61], [33, 59], [34, 62], [35, 65],
-            [36, 62], [37, 58], [38, 55], [39, 61], [40, 64], [41, 65],
-            [42, 63], [43, 66], [44, 67], [45, 69], [46, 69], [47, 70],
-            [48, 72], [49, 68], [50, 66], [51, 65], [52, 67], [53, 70],
-            [54, 71], [55, 72], [56, 73], [57, 75], [58, 70], [59, 68],
-            [60, 64], [61, 60], [62, 65], [63, 67], [64, 68], [65, 69],
-            [66, 70], [67, 72], [68, 75], [69, 80]
-        ]);
-
-        var options = {
-            hAxis: {
-                title: 'Time'
-            },
-            vAxis: {
-                title: 'U.S. Gasoline Stock Prices (1000 Barrels)'
-            },
-            backgroundColor: '#f1f8e9'
+    var elements = [];
+    function readSingleFile(e) {
+        var file = e.target.files[0];
+        if (!file) {
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var contents = e.target.result;
+            displayContents(contents);
+            //displayContents(contents);
         };
-
-        var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
-        chart.draw(data, options);
+        reader.readAsText(file);
     }
+    
+
+    function displayContents(contents) {
+        var element = document.getElementById('file-content');
+        element.textContent = contents;
+    }
+
+    document.getElementById('file-input')
+    .addEventListener('change', readSingleFile, false);
+
+
+
+    // function drawBackgroundColor(e) {
+    //     var data = new google.visualization.DataTable();
+    //     data.addColumn('number', 'X');
+    //     data.addColumn('number', 'Gasoline');
+    //     data.addRows=e;
+    //     console.log(e);
+    //     var options = {
+    //         hAxis: {
+    //             title: 'Time'
+    //         },
+    //         vAxis: {
+    //             title: 'U.S. Gasoline Stock Prices (1000 Barrels)'
+    //         },
+    //         backgroundColor: '#f1f8e9'
+    //     };
+
+    //     var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+    //     chart.draw(data, options);
+    // }
 </script>
 <footer class="footer">
     <div class="container" id="footer">
